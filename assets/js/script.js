@@ -120,15 +120,6 @@ function popolaCard(clone, squadra) {
   clone.querySelector(".card-paese").textContent = squadra.paese;
 }
 
-// Ritarda l'esecuzione di fn finché non passano `delay` ms senza nuove chiamate.
-// Usato sull'input per non chiamare l'API ad ogni carattere digitato.
-function debounce(fn, delay) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}
 
 // === Riferimenti DOM (cachati una volta sola) ===
 
@@ -295,8 +286,6 @@ document.getElementById("search-btn").addEventListener("click", eseguiRicerca);
 elSearchInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") eseguiRicerca();
 });
-// Debounce sull'input: la ricerca parte 400ms dopo che l'utente smette di digitare
-elSearchInput.addEventListener("input", debounce(eseguiRicerca, 400));
 
 // === Init ===
 
