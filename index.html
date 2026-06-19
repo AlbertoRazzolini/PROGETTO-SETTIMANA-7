@@ -38,6 +38,11 @@
         <div id="preferite-grid" class="cards-grid"></div>
       </section>
 
+      <section id="appuntamenti-section" hidden>
+        <h2>📅 I tuoi prossimi appuntamenti</h2>
+        <div id="appuntamenti-lista"></div>
+      </section>
+
       <section id="risultati-section">
         <h2>Squadre trovate</h2>
         <p id="risultati-placeholder">Volevi cercare una squadra qui sopra</p>
@@ -78,6 +83,14 @@
           <strong class="evento-partita"></strong>
           <span class="badge-punteggio" hidden></span>
         </div>
+      </div>
+    </template>
+
+    <template id="tmpl-appuntamento">
+      <div class="appuntamento-item">
+        <span class="appuntamento-data"></span>
+        <span class="appuntamento-squadra"></span>
+        <strong class="appuntamento-partita"></strong>
       </div>
     </template>
 

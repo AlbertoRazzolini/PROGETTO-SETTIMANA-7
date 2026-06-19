@@ -137,8 +137,11 @@ function popolaCard(clone, squadra) {
 const tmplCard = document.getElementById("tmpl-card");
 const tmplCardPreferita = document.getElementById("tmpl-card-preferita");
 const tmplEventoItem = document.getElementById("tmpl-evento-item");
+const tmplAppuntamento = document.getElementById("tmpl-appuntamento");
 const tmplModal = document.getElementById("tmpl-modal");
 
+const elAppuntamentiSection = document.getElementById("appuntamenti-section");
+const elAppuntamentiLista = document.getElementById("appuntamenti-lista");
 const elFiltriSport = document.getElementById("filtri-sport");
 const elPreferiteGrid = document.getElementById("preferite-grid");
 const elPreferitePlaceholder = document.getElementById("preferite-placeholder");
@@ -214,15 +217,38 @@ function renderPreferite() {
   });
 }
 
+function renderAppuntamenti(eventi) {
+  if (eventi.length === 0) {
+    elAppuntamentiSection.hidden = true;
+    return;
+  }
+
+  elAppuntamentiSection.hidden = false;
+  elAppuntamentiLista.replaceChildren();
+
+  eventi.forEach(({ ev, squadra }) => {
+    const clone = tmplAppuntamento.content.cloneNode(true);
+    clone.querySelector(".appuntamento-data").textContent = ev.formatData();
+    clone.querySelector(".appuntamento-squadra").textContent = squadra.nome;
+    clone.querySelector(".appuntamento-partita").textContent =
+      `${ev.casa} vs ${ev.trasferta}`;
+    elAppuntamentiLista.appendChild(clone);
+  });
+}
+
 // Recupera in parallelo il prossimo evento per ogni preferita con Promise.allSettled,
 // così un singolo fallimento non blocca le altre card.
 async function caricaEventiPreferite() {
-  if (preferite.length === 0) return;
+  if (preferite.length === 0) {
+    elAppuntamentiSection.hidden = true;
+    return;
+  }
 
   const risultati = await Promise.allSettled(
     preferite.map((s) => caricaProssimoEvento(s.id)),
   );
 
+  // Aggiorna il testo del prossimo evento su ogni card preferita
   const els = elPreferiteGrid.querySelectorAll(".card-prossimo-evento");
   risultati.forEach((risultato, i) => {
     const el = els[i];
@@ -234,6 +260,18 @@ async function caricaEventiPreferite() {
       el.textContent = "Nessun evento in programma";
     }
   });
+
+  // Aggrega tutti gli eventi di tutte le preferite e li ordina per data
+  const tuttiEventi = [];
+  risultati.forEach((risultato, i) => {
+    if (risultato.status === "fulfilled") {
+      risultato.value.forEach((ev) => {
+        tuttiEventi.push({ ev, squadra: preferite[i] });
+      });
+    }
+  });
+  tuttiEventi.sort((a, b) => a.ev.data.localeCompare(b.ev.data));
+  renderAppuntamenti(tuttiEventi);
 }
 
 // Svuota la griglia dei risultati e la ripopola clonando il template per ogni squadra
