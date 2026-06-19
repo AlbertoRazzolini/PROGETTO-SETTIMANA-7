@@ -4,18 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SportsHub — Eventi sportivi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/style.css" />
   </head>
   <body>
     <header class="site-header">
       <h1>SportsHub</h1>
-      <p>
-        Cerca una squadra, scropri le prossime partite e gli ultimi risultati
-      </p>
+      <p>Cerca una squadra, scopri le prossime partite e gli ultimi risultati.</p>
       <div class="search-bar">
         <input
           type="text"
-          placeholder="Inserisci il nome della squadra..."
+          placeholder="es. Arsenal, Lakers, Real Madrid"
           id="search-input"
         />
         <button id="search-btn">Cerca</button>
@@ -23,14 +24,66 @@
     </header>
 
     <main class="container">
+      <section id="preferite-section">
+        <h2>⭐ Le tue squadre preferite</h2>
+        <p id="preferite-placeholder">Non hai ancora salvato nessuna squadra. Cercane una qui sopra e aggiungila ai preferiti!</p>
+        <div id="preferite-grid" class="cards-grid"></div>
+      </section>
+
       <section id="risultati-section">
-        <!-- Spinner, errore, lista risultati ricerca squadre -->
+        <h2>Squadre trovate</h2>
+        <p id="risultati-placeholder">Volevi cercare una squadra qui sopra</p>
+        <div id="spinner" class="spinner" hidden></div>
+        <p id="errore-msg" class="errore" hidden></p>
+        <div id="risultati-grid" class="cards-grid"></div>
       </section>
 
       <section id="dettagli-section" hidden>
-        <!-- Visibile dopo click su una squadra: prossimi eventi + ultimi risultati -->
+        <div class="dettagli-panel">
+          <h3 id="dettagli-nome"></h3>
+          <div class="dettagli-colonne">
+            <div class="dettagli-col">
+              <h4>Prossimi eventi</h4>
+              <div id="prossimi-lista"></div>
+            </div>
+            <div class="dettagli-col">
+              <h4>Ultimi risultati</h4>
+              <div id="ultimi-lista"></div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
+
+    <template id="tmpl-card">
+      <div class="card">
+        <img class="card-logo" src="" alt="" />
+        <h3 class="card-nome"></h3>
+        <p class="card-lega"></p>
+        <p class="card-paese"></p>
+        <button class="btn-aggiungi">⭐ Aggiungi ai preferiti</button>
+      </div>
+    </template>
+
+    <template id="tmpl-card-preferita">
+      <div class="card">
+        <img class="card-logo" src="" alt="" />
+        <h3 class="card-nome"></h3>
+        <p class="card-lega"></p>
+        <p class="card-paese"></p>
+        <button class="btn-rimuovi">🗑 Rimuovi</button>
+      </div>
+    </template>
+
+    <template id="tmpl-evento-item">
+      <div class="evento-item">
+        <span class="evento-data"></span>
+        <div class="evento-info">
+          <strong class="evento-partita"></strong>
+          <span class="badge-punteggio" hidden></span>
+        </div>
+      </div>
+    </template>
 
     <script src="assets/js/script.js"></script>
   </body>
