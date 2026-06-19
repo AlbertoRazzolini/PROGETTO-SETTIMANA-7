@@ -8,6 +8,7 @@ class Squadra {
     this.logo = data.strBadge;
     this.lega = data.strLeague;
     this.paese = data.strCountry;
+    this.sport = data.strSport;
   }
 }
 
@@ -73,6 +74,14 @@ async function caricaDettagli(idTeam) {
   };
 }
 
+// Recupera solo i prossimi eventi di una squadra (più leggero di caricaDettagli)
+async function caricaProssimoEvento(idTeam) {
+  const res = await fetch(`${BASE_URL}/eventsnext.php?id=${idTeam}`);
+  if (!res.ok) throw new Error("Errore di rete");
+  const data = await res.json();
+  return (data.events || []).map((e) => new Evento(e));
+}
+
 // === Stato ===
 
 let squadreCorrente = [];
@@ -89,6 +98,7 @@ function aggiungiPreferita(squadra) {
   preferite.push(squadra);
   salvaPreferite();
   renderPreferite();
+  caricaEventiPreferite();
   // Aggiorniamo i bottoni nei risultati per riflettere il nuovo stato
   renderRisultati(squadreCorrente);
 }
@@ -97,6 +107,7 @@ function rimuoviPreferita(id) {
   preferite = preferite.filter((s) => s.id !== id);
   salvaPreferite();
   renderPreferite();
+  caricaEventiPreferite();
   // Aggiorniamo i bottoni nei risultati per riflettere il nuovo stato
   renderRisultati(squadreCorrente);
 }
@@ -126,20 +137,55 @@ function popolaCard(clone, squadra) {
 const tmplCard = document.getElementById("tmpl-card");
 const tmplCardPreferita = document.getElementById("tmpl-card-preferita");
 const tmplEventoItem = document.getElementById("tmpl-evento-item");
+const tmplModal = document.getElementById("tmpl-modal");
 
+const elFiltriSport = document.getElementById("filtri-sport");
 const elPreferiteGrid = document.getElementById("preferite-grid");
 const elPreferitePlaceholder = document.getElementById("preferite-placeholder");
 const elRisultatiGrid = document.getElementById("risultati-grid");
 const elRisultatiPlaceholder = document.getElementById("risultati-placeholder");
-const elDettagliSection = document.getElementById("dettagli-section");
-const elDettagliNome = document.getElementById("dettagli-nome");
-const elProssimiLista = document.getElementById("prossimi-lista");
-const elUltimiLista = document.getElementById("ultimi-lista");
+const elModalContainer = document.getElementById("modal-container");
 const elSpinner = document.getElementById("spinner");
 const elErroreMsg = document.getElementById("errore-msg");
 const elSearchInput = document.getElementById("search-input");
 
 // === Render ===
+
+// Crea i bottoni filtro per sport unici presenti nei risultati.
+// Se tutti i risultati appartengono allo stesso sport, non mostra nulla.
+function renderFiltri(squadre) {
+  elFiltriSport.replaceChildren();
+
+  const sport = [...new Set(squadre.map((s) => s.sport).filter(Boolean))];
+  if (sport.length <= 1) return;
+
+  const creaBottone = (etichetta, onClick) => {
+    const btn = document.createElement("button");
+    btn.textContent = etichetta;
+    btn.className = "btn-filtro";
+    btn.addEventListener("click", () => {
+      elFiltriSport
+        .querySelectorAll(".btn-filtro")
+        .forEach((b) => b.classList.remove("btn-filtro--attivo"));
+      btn.classList.add("btn-filtro--attivo");
+      onClick();
+    });
+    return btn;
+  };
+
+  const btnTutti = creaBottone("Tutti", () => renderRisultati(squadreCorrente));
+  btnTutti.classList.add("btn-filtro--attivo");
+  elFiltriSport.appendChild(btnTutti);
+
+  sport.forEach((s) => {
+    elFiltriSport.appendChild(
+      creaBottone(s, () =>
+        renderRisultati(squadreCorrente.filter((sq) => sq.sport === s)),
+      ),
+    );
+  });
+}
+
 
 // Svuota la griglia dei preferiti e la ripopola; mostra il placeholder se vuota
 function renderPreferite() {
@@ -155,6 +201,7 @@ function renderPreferite() {
     const clone = tmplCardPreferita.content.cloneNode(true);
     popolaCard(clone, squadra);
     // Click sul bottone Rimuovi: stopPropagation evita che il click raggiunga la card
+    clone.querySelector(".card-prossimo-evento").textContent = "Caricamento...";
     clone.querySelector(".btn-rimuovi").addEventListener("click", (e) => {
       e.stopPropagation();
       rimuoviPreferita(squadra.id);
@@ -164,6 +211,28 @@ function renderPreferite() {
       .querySelector(".card")
       .addEventListener("click", () => onCardClick(squadra));
     elPreferiteGrid.appendChild(clone);
+  });
+}
+
+// Recupera in parallelo il prossimo evento per ogni preferita con Promise.allSettled,
+// così un singolo fallimento non blocca le altre card.
+async function caricaEventiPreferite() {
+  if (preferite.length === 0) return;
+
+  const risultati = await Promise.allSettled(
+    preferite.map((s) => caricaProssimoEvento(s.id)),
+  );
+
+  const els = elPreferiteGrid.querySelectorAll(".card-prossimo-evento");
+  risultati.forEach((risultato, i) => {
+    const el = els[i];
+    if (!el) return;
+    if (risultato.status === "fulfilled" && risultato.value.length > 0) {
+      const ev = risultato.value[0];
+      el.textContent = `${ev.formatData()} — ${ev.casa} vs ${ev.trasferta}`;
+    } else {
+      el.textContent = "Nessun evento in programma";
+    }
   });
 }
 
@@ -234,23 +303,38 @@ function renderEventi(eventi, container, conPunteggio) {
   });
 }
 
-// Mostra il pannello dettagli, lancia il caricamento e aggiorna la UI al completamento
+function chiudiModal() {
+  elModalContainer.replaceChildren();
+}
+
+// Clona il template modal, lo popola con i placeholder e lo inserisce nel DOM.
+// Poi carica i dettagli in modo asincrono e aggiorna le liste già visibili.
 async function onCardClick(squadra) {
-  elDettagliNome.textContent = squadra.nome;
-  // Mostriamo subito il pannello con un placeholder mentre aspettiamo l'API
-  elProssimiLista.replaceChildren(
-    creaP("placeholder-eventi", "Caricamento..."),
-  );
-  elUltimiLista.replaceChildren(creaP("placeholder-eventi", "Caricamento..."));
-  elDettagliSection.hidden = false;
-  elDettagliSection.scrollIntoView({ behavior: "smooth" });
+  const clone = tmplModal.content.cloneNode(true);
+
+  // Salviamo i riferimenti ai nodi prima che il fragment venga consumato dall'append
+  const overlay = clone.querySelector(".modal-overlay");
+  const prossimiLista = clone.querySelector(".modal-prossimi");
+  const ultimiLista = clone.querySelector(".modal-ultimi");
+
+  clone.querySelector(".modal-nome").textContent = squadra.nome;
+  clone.querySelector(".modal-chiudi").addEventListener("click", chiudiModal);
+  // Clic sull'overlay (fuori dalla modal) chiude senza toccare il contenuto interno
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) chiudiModal();
+  });
+
+  prossimiLista.appendChild(creaP("placeholder-eventi", "Caricamento..."));
+  ultimiLista.appendChild(creaP("placeholder-eventi", "Caricamento..."));
+
+  elModalContainer.replaceChildren(clone);
 
   try {
     const { prossimi, ultimi } = await caricaDettagli(squadra.id);
-    renderEventi(prossimi, elProssimiLista, false);
-    renderEventi(ultimi, elUltimiLista, true);
+    renderEventi(prossimi, prossimiLista, false);
+    renderEventi(ultimi, ultimiLista, true);
   } catch {
-    elProssimiLista.replaceChildren(
+    prossimiLista.replaceChildren(
       creaP("errore", "Errore nel caricamento dei dettagli."),
     );
   }
@@ -266,11 +350,13 @@ async function eseguiRicerca() {
   elSpinner.hidden = false;
   elErroreMsg.hidden = true;
   elRisultatiPlaceholder.hidden = true;
+  elFiltriSport.replaceChildren();
   elRisultatiGrid.replaceChildren();
-  elDettagliSection.hidden = true;
+  chiudiModal();
 
   try {
     squadreCorrente = await cercaSquadre(query);
+    renderFiltri(squadreCorrente);
     renderRisultati(squadreCorrente);
   } catch {
     elErroreMsg.textContent = "Errore durante la ricerca. Riprova.";
@@ -289,5 +375,6 @@ elSearchInput.addEventListener("keydown", (e) => {
 
 // === Init ===
 
-// All'avvio rendiamo subito i preferiti salvati nel localStorage
+// All'avvio rendiamo i preferiti e carichiamo subito i loro prossimi eventi
 renderPreferite();
+caricaEventiPreferite();
