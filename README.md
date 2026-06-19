@@ -4,11 +4,12 @@ Applicazione web per cercare squadre sportive, scoprire i prossimi eventi e gli 
 
 ## Funzionalità
 
-- **Ricerca squadre** tramite nome, con invio da tastiera o click sul bottone
+- **Ricerca squadre** tramite nome, con invio da tastiera o click sul bottone — supporta più nomi separati da virgola (es. `Arsenal, Los Angeles Lakers`)
 - **Filtro per sport** generato dinamicamente dai risultati della ricerca
 - **Modal dettagli** con prossimi eventi e ultimi risultati al click su una card
 - **Squadre preferite** salvate in `localStorage`, persistenti tra le sessioni
 - **Prossimo evento** caricato automaticamente per ogni squadra preferita all'avvio
+- **Prossimi appuntamenti** — vista aggregata e ordinata per data di tutti i prossimi eventi delle squadre preferite
 
 ## Tecnologie
 

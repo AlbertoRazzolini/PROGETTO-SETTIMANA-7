@@ -131,7 +131,6 @@ function popolaCard(clone, squadra) {
   clone.querySelector(".card-paese").textContent = squadra.paese;
 }
 
-
 // === Riferimenti DOM (cachati una volta sola) ===
 
 const tmplCard = document.getElementById("tmpl-card");
@@ -160,7 +159,7 @@ function renderFiltri(squadre) {
   elFiltriSport.replaceChildren();
 
   const sport = [...new Set(squadre.map((s) => s.sport).filter(Boolean))];
-  if (sport.length <= 1) return;
+  if (sport.length === 0) return;
 
   const creaBottone = (etichetta, onClick) => {
     const btn = document.createElement("button");
@@ -188,7 +187,6 @@ function renderFiltri(squadre) {
     );
   });
 }
-
 
 // Svuota la griglia dei preferiti e la ripopola; mostra il placeholder se vuota
 function renderPreferite() {
@@ -393,7 +391,20 @@ async function eseguiRicerca() {
   chiudiModal();
 
   try {
-    squadreCorrente = await cercaSquadre(query);
+    const termini = query
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const risultati = await Promise.all(termini.map((t) => cercaSquadre(t)));
+    // flat() unisce gli array di ogni termine in uno solo
+    const tutte = risultati.flat();
+    // Rimuoviamo i duplicati in caso lo stesso team esca in più ricerche
+    const viste = new Set();
+    squadreCorrente = tutte.filter((s) => {
+      if (viste.has(s.id)) return false;
+      viste.add(s.id);
+      return true;
+    });
     renderFiltri(squadreCorrente);
     renderRisultati(squadreCorrente);
   } catch {
